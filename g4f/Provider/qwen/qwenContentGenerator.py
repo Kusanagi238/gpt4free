@@ -1,6 +1,11 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
-from .sharedTokenManager import SharedTokenManager
+try:
+    from .sharedTokenManager import SharedTokenManager
+except Exception:
+    # Avoid import-time errors (e.g. syntax errors in the provider module).
+    # The real manager can be imported lazily where needed.
+    SharedTokenManager = None
 from .qwenOAuth2 import IQwenOAuth2Client
 
 # Default base URL if not specified
@@ -8,10 +13,7 @@ DEFAULT_QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 
 class QwenContentGenerator:
-    def __init__(
-        self,
-        qwen_client: IQwenOAuth2Client
-    ):
+    def __init__(self, qwen_client: IQwenOAuth2Client):
         self.qwen_client = qwen_client
         self.base_url = DEFAULT_QWEN_BASE_URL
         self.shared_manager = SharedTokenManager.getInstance()

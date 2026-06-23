@@ -1,14 +1,14 @@
-import os
-import json
-import time
 import asyncio
-import uuid
-from typing import Optional, Dict, Union
-from .stubs import IQwenOAuth2Client, ErrorDataDict
-from pathlib import Path
+import json
+import os
 import threading
+import time
+import uuid
+from pathlib import Path
+from typing import Dict, Optional, Union
 
 from ..base_provider import AuthFileMixin
+from .stubs import ErrorDataDict, IQwenOAuth2Client
 
 QWEN_DIR = ".qwen"
 QWEN_CREDENTIAL_FILENAME = "oauth_creds.json"
@@ -18,9 +18,7 @@ LOCK_TIMEOUT_MS = 10000
 CACHE_CHECK_INTERVAL_MS = 1000
 
 
-def isErrorResponse(
-    response: Union[Dict, ErrorDataDict]
-) -> bool:
+def isErrorResponse(response: Union[Dict, ErrorDataDict]) -> bool:
     return "error" in response
 
 
@@ -33,7 +31,9 @@ class TokenError:
 
 
 class TokenManagerError(Exception):
-    def __init__(self, type_: str, message: str, original_error: Optional[Exception] = None):
+    def __init__(
+        self, type_: str, message: str, original_error: Optional[Exception] = None
+    ):
         super().__init__(message)
         self.type = type_
         self.original_error = original_error
@@ -84,7 +84,9 @@ class SharedTokenManager(AuthFileMixin):
 
         atexit.register(cleanup)
 
-    async def getValidCredentials(self, qwen_client: IQwenOAuth2Client, force_refresh: bool = False):
+    async def getValidCredentials(
+        self, qwen_client: IQwenOAuth2Client, force_refresh: bool = False
+    ):
         try:
             self.checkAndReloadIfNeeded()
 
@@ -98,7 +100,9 @@ class SharedTokenManager(AuthFileMixin):
             if self.refresh_promise:
                 return await self.refresh_promise
 
-            self.refresh_promise = asyncio.create_task(self.performTokenRefresh(qwen_client, force_refresh))
+            self.refresh_promise = asyncio.create_task(
+                self.performTokenRefresh(qwen_client, force_refresh)
+            )
             credentials = await self.refresh_promise
             self.refresh_promise = None
             return credentials
@@ -118,7 +122,7 @@ class SharedTokenManager(AuthFileMixin):
             stat = file_path.stat()
             file_mod_time = int(stat.st_mtime * 1000)
             if file_mod_time > self.memory_cache["file_mod_time"]:
-                await self.reloadCredentialsFromFile()
+                self.reloadCredentialsFromFile()
                 self.memory_cache["file_mod_time"] = file_mod_time
         except FileNotFoundError:
             self.memory_cache["file_mod_time"] = 0
@@ -133,7 +137,7 @@ class SharedTokenManager(AuthFileMixin):
                 data = json.load(fs)
                 credentials = self.validateCredentials(data)
                 self.memory_cache["credentials"] = credentials
-        except Exception as e:
+        except Exception:
             self.memory_cache["credentials"] = None
 
     def validateCredentials(self, data):
@@ -142,11 +146,15 @@ class SharedTokenManager(AuthFileMixin):
         for field in ["access_token", "refresh_token", "token_type"]:
             if field not in data or not isinstance(data[field], str):
                 raise ValueError(f"Invalid credentials: missing {field}")
-        if "expiry_date" not in data or not isinstance(data["expiry_date"], (int, float)):
+        if "expiry_date" not in data or not isinstance(
+            data["expiry_date"], (int, float)
+        ):
             raise ValueError("Invalid credentials: missing expiry_date")
         return data
 
-    async def performTokenRefresh(self, qwen_client: IQwenOAuth2Client, force_refresh: bool):
+    async def performTokenRefresh(
+        self, qwen_client: IQwenOAuth2Client, force_refresh: bool
+    ):
         lock_path = self.getLockFilePath()
         try:
             qwen_client.setCredentials(self.memory_cache["credentials"])
@@ -170,14 +178,19 @@ class SharedTokenManager(AuthFileMixin):
                 raise TokenManagerError(TokenError.REFRESH_FAILED, str(response))
             token_data = response
             if "access_token" not in token_data:
-                raise TokenManagerError(TokenError.REFRESH_FAILED, "No access_token returned")
+                raise TokenManagerError(
+                    TokenError.REFRESH_FAILED, "No access_token returned"
+                )
 
             credentials = {
                 "access_token": token_data["access_token"],
                 "token_type": token_data["token_type"],
-                "refresh_token": token_data.get("refresh_token", current_credentials.get("refresh_token")),
+                "refresh_token": token_data.get(
+                    "refresh_token", current_credentials.get("refresh_token")
+                ),
                 "resource_url": token_data.get("resource_url"),
-                "expiry_date": int(time.time() * 1000) + token_data.get("expires_in", 0) * 1000,
+                "expiry_date": int(time.time() * 1000)
+                + token_data.get("expires_in", 0) * 1000,
             }
             self.memory_cache["credentials"] = credentials
             qwen_client.setCredentials(credentials)

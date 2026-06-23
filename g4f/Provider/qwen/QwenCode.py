@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from ...typing import Messages, AsyncResult
-from ...errors import MissingAuthError
+from ...typing import AsyncResult, Messages
 from ..template import OpenaiTemplate
-from .qwenContentGenerator import QwenContentGenerator
 from .qwenOAuth2 import QwenOAuth2Client
-from .sharedTokenManager import TokenManagerError
+
 
 class QwenCode(OpenaiTemplate):
     label = "Qwen Code 🤖"
@@ -35,7 +33,7 @@ class QwenCode(OpenaiTemplate):
         messages: Messages,
         api_key: str = None,
         api_base: str = None,
-        **kwargs
+        **kwargs,
     ) -> AsyncResult:
         try:
             creds = await cls.client.get_valid_token()
@@ -45,13 +43,15 @@ class QwenCode(OpenaiTemplate):
                 messages,
                 api_key=creds.get("token", api_key),
                 api_base=creds.get("endpoint", api_base),
-                **kwargs
+                **kwargs,
             ):
                 if chunk != last_chunk:
                     yield chunk
                 last_chunk = chunk
         except TokenManagerError:
-            await cls.client.shared_manager.getValidCredentials(cls.client.qwen_client, True)
+            await cls.client.shared_manager.getValidCredentials(
+                cls.client.qwen_client, True
+            )
             creds = await cls.client.get_valid_token()
             last_chunk = None
             async for chunk in super().create_async_generator(
@@ -59,7 +59,7 @@ class QwenCode(OpenaiTemplate):
                 messages,
                 api_key=creds.get("token"),
                 api_base=creds.get("endpoint"),
-                **kwargs
+                **kwargs,
             ):
                 if chunk != last_chunk:
                     yield chunk

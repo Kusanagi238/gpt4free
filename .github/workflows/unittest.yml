@@ -1,14 +1,6 @@
 name: Unittest
 
-on: 
-  pull_request:
-    types:
-      - opened
-      - synchronize
-  push:
-    branches:
-      - 'main'
-
+on: push
 jobs:
   build:
     name: Build unittest
@@ -18,8 +10,8 @@ jobs:
     - name: Set up Python 3.8
       uses: actions/setup-python@v4
       with:
-        python-version: "3.8"
-        cache: 'pip'
+        python-version: '3.8'
+        cache: pip
     - name: Install min requirements
       run: pip install -r requirements-min.txt
     - name: Run tests
@@ -27,8 +19,8 @@ jobs:
     - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: "3.12"
-        cache: 'pip'
+        python-version: '3.12'
+        cache: pip
     - name: Install requirements
       run: |
         pip install -r requirements.txt
